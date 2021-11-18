@@ -612,12 +612,12 @@ namespace Unity.MLAgents
         /// </param>
         /// <returns> The ModelRunner compatible with the input settings.</returns>
         internal ModelRunner GetOrCreateModelRunner(
-            NNModel model, ActionSpec actionSpec, InferenceDevice inferenceDevice)
+            NNModel model, ActionSpec actionSpec, InferenceDevice inferenceDevice, string[] additionalOutputs = null)   //sen
         {
             var modelRunner = m_ModelRunners.Find(x => x.HasModel(model, inferenceDevice));
             if (modelRunner == null)
             {
-                modelRunner = new ModelRunner(model, actionSpec, inferenceDevice, m_InferenceSeed);
+                modelRunner = new ModelRunner(model, actionSpec, inferenceDevice, m_InferenceSeed, additionalOutputs);  //sen
                 m_ModelRunners.Add(modelRunner);
                 m_InferenceSeed++;
             }

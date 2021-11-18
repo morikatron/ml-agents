@@ -261,6 +261,9 @@ namespace Unity.MLAgents
         [FormerlySerializedAs("maxStep")]
         [HideInInspector] public int MaxStep;
 
+        public string[] m_additionalOutputNames;
+        public Dictionary<string, float[]> additionalOuput;
+
         /// Current Agent information (message sent to Brain).
         AgentInfo m_Info;
 
@@ -459,7 +462,7 @@ namespace Unity.MLAgents
                 InitializeActuators();
             }
 
-            m_Brain = m_PolicyFactory.GeneratePolicy(m_ActuatorManager.GetCombinedActionSpec(), m_ActuatorManager);
+            m_Brain = m_PolicyFactory.GeneratePolicy(m_ActuatorManager.GetCombinedActionSpec(), m_ActuatorManager, m_additionalOutputNames);
             ResetData();
             Initialize();
 
@@ -472,6 +475,8 @@ namespace Unity.MLAgents
                 new float[m_ActuatorManager.NumContinuousActions],
                 new int[m_ActuatorManager.NumDiscreteActions]
             );
+
+            additionalOuput = new Dictionary<string, float[]>();
 
             m_Info.groupId = m_GroupId;
 
@@ -645,7 +650,7 @@ namespace Unity.MLAgents
                 return;
             }
             m_Brain?.Dispose();
-            m_Brain = m_PolicyFactory.GeneratePolicy(m_ActuatorManager.GetCombinedActionSpec(), m_ActuatorManager);
+            m_Brain = m_PolicyFactory.GeneratePolicy(m_ActuatorManager.GetCombinedActionSpec(), m_ActuatorManager, m_additionalOutputNames);
         }
 
         /// <summary>
@@ -1357,6 +1362,8 @@ namespace Unity.MLAgents
             var actions = m_Brain?.DecideAction() ?? new ActionBuffers();
             m_Info.CopyActions(actions);
             m_ActuatorManager.UpdateActions(actions);
+
+            additionalOuput = m_Brain?.GetAdditionalOutput();
         }
 
         internal void SetMultiAgentGroup(IMultiAgentGroup multiAgentGroup)

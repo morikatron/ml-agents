@@ -52,6 +52,11 @@ namespace Unity.MLAgents.Policies
             return ref m_ActionBuffers;
         }
 
+        public Dictionary<string, float[]> GetAdditionalOutput()
+        {
+            return new Dictionary<string, float[]>();
+        }
+
         public void Dispose()
         {
         }

@@ -212,7 +212,7 @@ namespace Unity.MLAgents.Policies
             OnPolicyUpdated += mode => { };
         }
 
-        internal IPolicy GeneratePolicy(ActionSpec actionSpec, ActuatorManager actuatorManager)
+        internal IPolicy GeneratePolicy(ActionSpec actionSpec, ActuatorManager actuatorManager, string[] additionalOutputs=null)
         {
             switch (m_BehaviorType)
             {
@@ -228,7 +228,7 @@ namespace Unity.MLAgents.Policies
                                 "Either assign a model, or change to a different Behavior Type."
                             );
                         }
-                        return new BarracudaPolicy(actionSpec, actuatorManager, m_Model, m_InferenceDevice, m_BehaviorName);
+                        return new BarracudaPolicy(actionSpec, actuatorManager, m_Model, m_InferenceDevice, m_BehaviorName, additionalOutputs);
                     }
                 case BehaviorType.Default:
                     if (Academy.Instance.IsCommunicatorOn)
@@ -237,7 +237,7 @@ namespace Unity.MLAgents.Policies
                     }
                     if (m_Model != null)
                     {
-                        return new BarracudaPolicy(actionSpec, actuatorManager, m_Model, m_InferenceDevice, m_BehaviorName);
+                        return new BarracudaPolicy(actionSpec, actuatorManager, m_Model, m_InferenceDevice, m_BehaviorName, additionalOutputs);
                     }
                     else
                     {

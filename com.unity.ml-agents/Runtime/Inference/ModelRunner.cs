@@ -17,6 +17,7 @@ namespace Unity.MLAgents.Inference
     {
         List<AgentInfoSensorsPair> m_Infos = new List<AgentInfoSensorsPair>();
         Dictionary<int, ActionBuffers> m_LastActionsReceived = new Dictionary<int, ActionBuffers>();
+        Dictionary<int, Dictionary<string, float[]>> m_LastAdditionalOutputReceived = new Dictionary<int, Dictionary<string, float[]>>();
         List<int> m_OrderedAgentsRequestingDecisions = new List<int>();
 
         ITensorAllocator m_TensorAllocator;
@@ -29,6 +30,7 @@ namespace Unity.MLAgents.Inference
         IWorker m_Engine;
         bool m_Verbose = false;
         string[] m_OutputNames;
+        string[] m_AdditionalOutputNames;
         IReadOnlyList<TensorProxy> m_InferenceInputs;
         List<TensorProxy> m_InferenceOutputs;
         Dictionary<string, Tensor> m_InputsByName;
@@ -54,7 +56,8 @@ namespace Unity.MLAgents.Inference
             NNModel model,
             ActionSpec actionSpec,
             InferenceDevice inferenceDevice,
-            int seed = 0)
+            int seed = 0,
+            string[] additionalOutputs = null)
         {
             Model barracudaModel;
             m_Model = model;
@@ -66,6 +69,7 @@ namespace Unity.MLAgents.Inference
 #if BARRACUDA_VERBOSE
                 m_Verbose = true;
 #endif
+                m_AdditionalOutputNames = additionalOutputs;
 
                 D.logEnabled = m_Verbose;
 
@@ -99,7 +103,7 @@ namespace Unity.MLAgents.Inference
                         executionDevice = WorkerFactory.Type.CSharpBurst;
                         break;
                 }
-                m_Engine = WorkerFactory.CreateWorker(executionDevice, barracudaModel, m_Verbose);
+                m_Engine = WorkerFactory.CreateWorker(executionDevice, barracudaModel, additionalOutputs, m_Verbose);
             }
             else
             {
@@ -152,6 +156,32 @@ namespace Unity.MLAgents.Inference
                 var output = m_Engine.PeekOutput(n);
                 m_InferenceOutputs.Add(TensorUtils.TensorProxyFromBarracuda(output, n));
             }
+
+            foreach (var name in m_AdditionalOutputNames)
+            {
+                var output = m_Engine.PeekOutput(name);
+                var tensorProxy = TensorUtils.TensorProxyFromBarracuda(output, name);
+                string log = "";
+                for (int i=0; i<tensorProxy.shape[1]; i++)
+                    log += tensorProxy.data[(int)tensorProxy.shape[0] - 1, i] + ", ";
+
+                var featureSize = tensorProxy.shape[tensorProxy.shape.Length-1];
+
+                for (var i = 0; i < m_OrderedAgentsRequestingDecisions.Count; i++)
+                {
+                    var agentId = m_OrderedAgentsRequestingDecisions[i];
+                    if (m_LastAdditionalOutputReceived.ContainsKey(agentId))
+                    {
+                        var outputs = m_LastAdditionalOutputReceived[agentId];
+
+                        if (!outputs.ContainsKey(name))
+                            outputs.Add(name, new float[featureSize]);
+
+                        for (int j = 0; j < featureSize; j++)
+                            outputs[name][j] = (float)tensorProxy.data[i, j];
+                    }
+                }
+            }
         }
 
         public void PutObservations(AgentInfo info, List<ISensor> sensors)
@@ -177,6 +207,15 @@ namespace Unity.MLAgents.Inference
                 // If the agent is done, we remove the key from the last action dictionary since no action
                 // should be taken.
                 m_LastActionsReceived.Remove(info.episodeId);
+            }
+
+            if (!m_LastAdditionalOutputReceived.ContainsKey(info.episodeId))
+            {
+                m_LastAdditionalOutputReceived[info.episodeId] = new Dictionary<string, float[]>();
+            }
+            if (info.done)
+            {
+                m_LastAdditionalOutputReceived.Remove(info.episodeId);
             }
         }
 
@@ -242,6 +281,13 @@ namespace Unity.MLAgents.Inference
                 return m_LastActionsReceived[agentId];
             }
             return ActionBuffers.Empty;
+        }
+
+        public Dictionary<string, float[]> GetAdditionalOutput(int agentId)
+        {
+            if (m_LastAdditionalOutputReceived.ContainsKey(agentId))
+                return m_LastAdditionalOutputReceived[agentId];
+            return new Dictionary<string, float[]>();
         }
     }
 }

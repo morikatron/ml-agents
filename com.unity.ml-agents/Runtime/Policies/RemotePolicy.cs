@@ -46,6 +46,11 @@ namespace Unity.MLAgents.Policies
             m_Communicator?.PutObservations(m_FullyQualifiedBehaviorName, info, sensors);
         }
 
+        public Dictionary<string, float[]> GetAdditionalOutput()
+        {
+            return new Dictionary<string, float[]>();
+        }
+
         [Conditional("MLA_UNITY_ANALYTICS_MODULE")]
         void SendAnalytics(IList<ISensor> sensors)
         {

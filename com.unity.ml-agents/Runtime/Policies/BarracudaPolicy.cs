@@ -43,6 +43,7 @@ namespace Unity.MLAgents.Policies
     {
         protected ModelRunner m_ModelRunner;
         ActionBuffers m_LastActionBuffer;
+        Dictionary<string, float[]> m_LastAdditionalOutput;
 
         int m_AgentId;
 
@@ -78,10 +79,11 @@ namespace Unity.MLAgents.Policies
             IList<IActuator> actuators,
             NNModel model,
             InferenceDevice inferenceDevice,
-            string behaviorName
+            string behaviorName,
+            string[] additionalOutputs=null
         )
         {
-            var modelRunner = Academy.Instance.GetOrCreateModelRunner(model, actionSpec, inferenceDevice);
+            var modelRunner = Academy.Instance.GetOrCreateModelRunner(model, actionSpec, inferenceDevice, additionalOutputs);
             m_ModelRunner = modelRunner;
             m_BehaviorName = behaviorName;
             m_ActionSpec = actionSpec;
@@ -119,13 +121,20 @@ namespace Unity.MLAgents.Policies
             if (m_ModelRunner == null)
             {
                 m_LastActionBuffer = ActionBuffers.Empty;
+                m_LastAdditionalOutput = new Dictionary<string, float[]>();
             }
             else
             {
                 m_ModelRunner?.DecideBatch();
                 m_LastActionBuffer = m_ModelRunner.GetAction(m_AgentId);
+                m_LastAdditionalOutput = m_ModelRunner.GetAdditionalOutput(m_AgentId);
             }
             return ref m_LastActionBuffer;
+        }
+
+        public Dictionary<string, float[]> GetAdditionalOutput()
+        {
+            return m_LastAdditionalOutput;
         }
 
         public void Dispose()
